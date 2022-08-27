@@ -3,13 +3,13 @@ from torchtext.legacy.data import Field
 import torch
 import numpy as np
 from tqdm import tqdm
-class PreprocessData:
+class Preprocess:
     def __init__(self,path,samples):
-        super(PreprocessData, self).__init__()
+        super(Preprocess, self).__init__()
         self.lines = open(path, encoding='utf-8').read().strip().split('\n')
         random.shuffle(self.lines)
         self.samples=samples
-        lines=random.sample(lines,samples)
+        lines=random.sample(self.lines,samples)
         self.raw_data=self.lines
         self.vocab_data = [[self.preprocess_string(l.split('=')[0]), self.preprocess_string(l.split('=')[1])] for l in self.lines]
         self.train = [{'src':self.preprocess_string(l.split('=')[0]), 'trg':self.preprocess_string(l.split('=')[1])} for l in self.lines]

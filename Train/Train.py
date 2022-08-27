@@ -2,7 +2,8 @@ import torch
 import torch.optim as optim
 import torch.nn as nn
 from torch.utils.data import  DataLoader
-from model import Transformer
+from model.Transformer import Transformer
+from tqdm import tqdm
 import numpy as np
 class Training:
     def __init__(self,train_data,val_data,test_data,exp_vocab,batch_size=1024,epochs=50,learning_rate = 3e-4) -> None:
@@ -49,12 +50,13 @@ class Training:
         criterion = nn.CrossEntropyLoss(ignore_index=pad_idx)
         return criterion
 
-    def get_model_parameters(self):
-        parameters = sum(p.numel() for p in self.model.parameters() if p.requires_grad)
+    def get_model_parameters(self,model):
+        parameters = sum(p.numel() for p in model.parameters() if p.requires_grad)
         print(f'Number of trainable parameters: {parameters}')
 
     def train(self):
         model = self.get_Tx_model(embedding_size=256,num_heads=8,num_layers=4,dropout=0.1,max_len=31,forward_expansion=4)
+        self.get_model_parameters(model)
         step = 0
         optimizer = self.get_optimizer(model)
         scheduler = self.get_scheduler(optimizer=optimizer,factor=0.1,patience=10,verbose=True)

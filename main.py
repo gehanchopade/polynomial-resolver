@@ -1,8 +1,8 @@
 import sys
 import numpy as np
 from typing import Tuple
-from Train import Train
-from Preprocessing import Preprocess
+from Train.Train import Training
+from Preprocessing.Preprocess import Preprocess
 MAX_SEQUENCE_LENGTH = 29
 TRAIN_URL = "https://scale-static-assets.s3-us-west-2.amazonaws.com/ml-interview/expand/train.txt"
 
@@ -10,8 +10,8 @@ def train():
     preprocess = Preprocess(path='train.txt',samples=1000000)
     train_data,val_data,test_data = preprocess.prepare_train_test_val_data()
     exp = preprocess.build_vocab()
-    train = Train(train_data,val_data,test_data,exp)
-    train.get_model_parameters()
+    print(train_data.shape,val_data.shape,test_data.shape)
+    train = Training(train_data,val_data,test_data,exp)
     train.train()
 
 def load_file(file_path: str) -> Tuple[Tuple[str], Tuple[str]]:
