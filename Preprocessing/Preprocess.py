@@ -9,7 +9,7 @@ class Preprocess:
         self.lines = open(path, encoding='utf-8').read().strip().split('\n')
         random.shuffle(self.lines)
         self.samples=samples
-        lines=random.sample(self.lines,samples)
+        self.lines=random.sample(self.lines,samples)
         self.raw_data=self.lines
         self.vocab_data = [[self.preprocess_string(l.split('=')[0]), self.preprocess_string(l.split('=')[1])] for l in self.lines]
         self.train = [{'src':self.preprocess_string(l.split('=')[0]), 'trg':self.preprocess_string(l.split('=')[1])} for l in self.lines]
