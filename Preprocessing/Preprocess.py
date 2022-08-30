@@ -1,47 +1,74 @@
 import random
-from torchtext.legacy.data import Field
-import torch
 import numpy as np
+from Preprocessing.Vocab import Vocabulary
 from tqdm import tqdm
 class Preprocess:
-    def __init__(self,path,samples):
+    def __init__(self,path,MAX_LEN,isTest):
         super(Preprocess, self).__init__()
         self.lines = open(path, encoding='utf-8').read().strip().split('\n')
-        random.shuffle(self.lines)
-        self.samples=samples
-        self.lines=random.sample(self.lines,samples)
-        self.raw_data=self.lines
-        self.vocab_data = [[self.preprocess_string(l.split('=')[0]), self.preprocess_string(l.split('=')[1])] for l in self.lines]
-        self.train = [{'src':self.preprocess_string(l.split('=')[0]), 'trg':self.preprocess_string(l.split('=')[1])} for l in self.lines]
-
-    def prepare_train_test_val_data(self):
-        max_len=31
-        data_list=[]
-        exp=self.build_vocab()
-        pad_idx=exp.vocab.stoi['<pad>']
-        for element in tqdm(self.train):
-            src=[exp.vocab.stoi[i] for i in (['<sos>']+element['src']+['<eos>'])]
-            trg=[exp.vocab.stoi[i] for i in (['<sos>']+element['trg']+['<eos>'])]
-            data_list.append([src+[pad_idx]*(max_len-len(src)),
-                            trg+[pad_idx]*(max_len-len(trg))])
-        x=torch.tensor(data_list)
-        train_data=x[:int(self.samples*0.8),:,:]
-        val_data=x[int(self.samples*0.8):int(self.samples*0.9),:,:]
-        test_data=x[int(self.samples*0.9):,:,:]
-
-        return train_data,val_data,test_data
-    def build_vocab(self):
-        def tokenize(text):
-            return list(text)
-        exp = Field(
-            tokenize=tokenize, lower=True, init_token="<sos>", eos_token="<eos>"
-        )
-
-        VB = np.array(self.vocab_data)
-        VB_src=VB[:,0]
-        exp.build_vocab(VB_src, max_size=100000, min_freq=1)
-        return exp
+        # random.shuffle(self.lines)
+        self.MAXLEN = MAX_LEN
+        self.isTest = isTest
+        self.characters, self.factors, self.expansions = self.prepare_raw_data()
+        self.x,self.y = self.vectorize_data()
+      
+    def prepare_raw_data(self):
+        factors = []
+        expansions =  []
+        characters=set({})
+        print('Preprocessing data...')
+        for i in tqdm(self.lines):
+            factor, expansion = self.preprocess_string(i.split('=')[0]),self.preprocess_string(i.split('=')[1])
+            factor = ''.join(factor)
+            expansion = ''.join(expansion)
+            factor = factor + " "*(self.MAXLEN - len(factor))
+            expansion = expansion + " "*(self.MAXLEN - len(expansion))
+            factor_chars, expansion_chars = set(factor),set(expansion)
+            characters.update(characters.union(factor_chars)-characters)
+            characters.update(characters.union(expansion_chars)-characters)
+            factors.append(factor)
+            expansions.append(expansion)
+        return characters,factors,expansions
+    def vectorize_data(self):
+        vocab = Vocabulary(self.characters,self.MAXLEN)
+        print("Vectorizing Data")
+        x = np.zeros((len(self.factors), self.MAXLEN, len(self.characters)), dtype=np.bool)
+        y = np.zeros((len(self.factors), self.MAXLEN, len(self.characters)), dtype=np.bool)
+        for i, sentence in enumerate(self.factors):
+            x[i] = vocab.string_numpy(sentence)
+        for i, sentence in enumerate(self.expansions):
+            y[i] = vocab.string_numpy(sentence)
+        indices = np.arange(len(y))
+        np.random.shuffle(indices)
+        x = x[indices]
+        y = y[indices]
+        return x,y
     
+        
+    def get_split_data(self,x,y):
+        split_at = len(x) - len(x) // 5 #80% data for training 20% for validation and testing
+        (x_train, x_val) = x[:split_at], x[split_at:]
+        (y_train, y_val) = y[:split_at], y[split_at:]
+
+        split_at = len(x_val) - len(x_val) // 2 #10% for validation and 10% for testing
+        (x_test, x_val) = x_val[:split_at], x_val[split_at:]
+        (y_test, y_val) = y_val[:split_at], y_val[split_at:]
+        data={
+            'x_train':x_train,
+            'x_test':x_test,
+            'x_val':x_val,
+            'y_train':y_train,
+            'y_test':y_test,
+            'y_val':y_val
+            
+        }
+        if(self.isTest):
+            return {
+                'x_test':x,
+                'y_test':y,
+            }
+        return data
+
     def preprocess_string(self,s):
         trig_dictionary={
         'cos':'!!!',
